@@ -15,7 +15,6 @@ import requests
 
 FEDINVEST_URL = "https://treasurydirect.gov/GA-FI/FedInvest/securityPriceDetail"
 
-# Light "browser-like" headers help avoid occasional blocking.
 HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.8",
@@ -31,17 +30,7 @@ HEADERS = {
 
 
 def parse_tsy_price_to_decimal(x) -> pd._libs.missing.NAType | float:
-    """
-    Convert common Treasury price quote formats to decimal float.
 
-    Handles:
-      - "99.515625" (already decimal)
-      - "99-16"     (99 + 16/32)
-      - "99-16+"    (99 + (16.5)/32  i.e. + = 1/64)
-      - "99-162"    (99 + (16 + 2/8)/32  last digit = 1/8 of 1/32 = 1/256)
-
-    If it can't parse, returns pd.NA.
-    """
     if x is None or (isinstance(x, float) and pd.isna(x)):
         return pd.NA
 
@@ -84,10 +73,7 @@ def parse_tsy_price_to_decimal(x) -> pd._libs.missing.NAType | float:
 
 
 def _decode_response_content(resp: requests.Response) -> str:
-    """
-    The site is sometimes labeled ISO-8859-1; content is typically ASCII/UTF-8 compatible.
-    We'll try UTF-8 first, then fall back.
-    """
+
     try:
         return resp.content.decode("utf-8")
     except UnicodeDecodeError:
@@ -99,11 +85,7 @@ def fetch_fedinvest_prices(
     session: Optional[requests.Session] = None,
     timeout: int = 30,
 ) -> pd.DataFrame:
-    """
-    Fetch CUSIP-level price data for a single date.
-    Returns a DataFrame with columns:
-      ['date','cusip','security_type','rate','maturity_date','call_date','bid','offer','eod_price']
-    """
+
     payload = {
         "priceDateDay": str(date.day),
         "priceDateMonth": str(date.month),
@@ -156,7 +138,6 @@ def save_daily_frame(df: pd.DataFrame, out_path: Path) -> None:
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        # Parquet is best for speed/size if pyarrow installed
         if out_path.suffix.lower() == ".parquet":
             df.to_parquet(out_path, index=False)
         else:
@@ -211,7 +192,6 @@ def main() -> None:
     end = dt.date.fromisoformat(args.end)
     outdir = Path(args.outdir)
 
-    # Business days only (US holidays will be attempted and typically fail gracefully)
     dates = pd.bdate_range(start, end).date
 
     try:
